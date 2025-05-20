@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatório de Portaria - Entrega de Posto</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 0; }
+        .container { max-width: 500px; margin: 40px auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #333; }
+        label { display: block; margin-top: 15px; color: #555; }
+        input, textarea { width: 100%; padding: 8px; margin-top: 5px; border-radius: 4px; border: 1px solid #ccc; }
+        button { margin-top: 20px; width: 100%; padding: 10px; background: #007bff; color: #fff; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .relatorio { margin-top: 30px; background: #e9ecef; padding: 15px; border-radius: 6px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Entrega de Posto - Relatório de Portaria</h2>
+        <form id="form-relatorio">
+            <label for="porteiro">Nome do Porteiro:</label>
+            <input type="text" id="porteiro" name="porteiro" required>
+
+            <label for="datahora">Data e Hora da Entrega:</label>
+            <input type="datetime-local" id="datahora" name="datahora" required>
+
+            <label for="entrada_porteiro">Hora da Entrada do Porteiro:</label>
+            <input type="datetime-local" id="entrada_porteiro" name="entrada_porteiro">
+
+            <label for="chaves_servico">Chaves de Serviço:</label>
+            <input type="text" id="chaves_servico" name="chaves_servico">
+
+            <label for="chaves_apartamento">Chaves do Apartamento:</label>
+            <input type="text" id="chaves_apartamento" name="chaves_apartamento">
+
+            <label for="itens_subir">Itens para Subir:</label>
+            <input type="text" id="itens_subir" name="itens_subir">
+
+            <label for="itens_sair">Itens para Sair:</label>
+            <input type="text" id="itens_sair" name="itens_sair">
+
+            <label for="observacoes">Observações:</label>
+            <textarea id="observacoes" name="observacoes" rows="4"></textarea>
+
+            <button type="submit">Gerar Relatório</button>
+            <button type="button" id="salvar-relatorio">Salvar Relatório</button>
+            <button type="button" id="exportar-csv">Exportar CSV</button>
+            <button type="button" id="exportar-pdf">Exportar PDF</button>
+        </form>
+        <div id="relatorio" class="relatorio" style="display:none;"></div>
+        <div id="success-msg" class="relatorio" style="display:none; background:#d4edda; color:#155724; border:1px solid #c3e6cb;"></div>
+        <div id="storage-list" class="relatorio" style="display:none;"></div>
+        <div id="login-area" class="relatorio" style="margin-top:30px;"></div>
+    </div>
+    <script>
+        // --- LOGIN E CADASTRO ---
+        let usuarioAtual = null;
+        function renderLogin() {
+            const loginDiv = document.getElementById('login-area');
+            if (usuarioAtual) {
+                loginDiv.innerHTML = `<b>Usuário logado:</b> ${usuarioAtual} <button onclick='logoutUsuario()'>Sair</button>`;
+                document.querySelector('.container form').style.display = '';
+            } else {
+                loginDiv.innerHTML = `<b>Login:</b><br>
+                    <input id='login-user' placeholder='Usuário' style='margin:5px 0;'><br>
+                    <input id='login-pass' type='password' placeholder='Senha'><br>
+                    <button onclick='loginUsuario()'>Entrar</button>
+                    <button onclick='cadastroUsuario()'>Cadastrar</button>`;
+                document.querySelector('.container form').style.display = 'none';
+                document.getElementById('relatorio').style.display = 'none';
+                document.getElementById('storage-list').style.display = 'none';
+            }
+        }
+        function loginUsuario() {
+            const u = document.getElementById('login-user').value.trim();
+            const p = document.getElementById('login-pass').value;
+            if (!u || !p) { alert('Preencha usuário e senha!'); return; }
+            let users = JSON.parse(localStorage.getItem('usuariosPortaria') || '{}');
+            if (!users[u] || users[u].senha !== p) { alert('Usuário ou senha inválidos!'); return; }
+            usuarioAtual = u;
+            localStorage.setItem('usuarioAtualPortaria', u);
+            // Limpa relatório e lista ao trocar de usuário
+            document.getElementById('relatorio').style.display = 'none';
+            document.getElementById('relatorio').innerHTML = '';
+            document.getElementById('success-msg').style.display = 'none';
+            document.getElementById('storage-list').style.display = 'none';
+            window.relatorioDados = undefined;
+            renderLogin();
+            atualizarListaRelatorios();
+            // Mostra último relatório do novo usuário, se houver
+            let relatorios = JSON.parse(localStorage.getItem(getStorageKey()) || '[]');
+            if (relatorios.length > 0) {
+                window.relatorioDados = relatorios[relatorios.length - 1];
+                window.visualizarRelatorio(relatorios.length - 1);
+            }
+        }
+        function cadastroUsuario() {
+            const u = document.getElementById('login-user').value.trim();
+            const p = document.getElementById('login-pass').value;
+            if (!u || !p) { alert('Preencha usuário e senha!'); return; }
+            let users = JSON.parse(localStorage.getItem('usuariosPortaria') || '{}');
+            if (users[u]) { alert('Usuário já existe!'); return; }
+            users[u] = { senha: p };
+            localStorage.setItem('usuariosPortaria', JSON.stringify(users));
+            alert('Usuário cadastrado! Faça login.');
+        }
+        function logoutUsuario() {
+            usuarioAtual = null;
+            localStorage.removeItem('usuarioAtualPortaria');
+            renderLogin();
+        }
+        // --- FIM LOGIN ---
+
+        // Carregar usuário logado ao abrir
+        usuarioAtual = localStorage.getItem('usuarioAtualPortaria') || null;
+        renderLogin();
+
+        // --- RELATÓRIO ---
+        function getStorageKey() {
+            return 'relatoriosPortaria_' + usuarioAtual;
+        }
+        document.getElementById('form-relatorio').addEventListener('submit', function(e) {
+            e.preventDefault();
+            if (!usuarioAtual) { alert('Faça login!'); return; }
+            const porteiro = document.getElementById('porteiro').value;
+            const datahora = document.getElementById('datahora').value;
+            const entrada_porteiro = document.getElementById('entrada_porteiro').value;
+            const chaves_servico = document.getElementById('chaves_servico').value;
+            const chaves_apartamento = document.getElementById('chaves_apartamento').value;
+            const itens_subir = document.getElementById('itens_subir').value;
+            const itens_sair = document.getElementById('itens_sair').value;
+            const observacoes = document.getElementById('observacoes').value;
+            const relatorioDiv = document.getElementById('relatorio');
+            window.relatorioDados = {
+                porteiro, datahora, chaves_servico, chaves_apartamento, itens_subir, itens_sair, observacoes,
+                entrada_porteiro,
+                dataGeracao: new Date().toLocaleString('pt-BR')
+            };
+            relatorioDiv.innerHTML = `<strong>Relatório de Entrega de Posto</strong><br><br>
+                <b>Porteiro:</b> ${porteiro}<br>
+                <b>Data/Hora:</b> ${new Date(datahora).toLocaleString('pt-BR')}<br>
+                <b>Hora da Entrada do Porteiro:</b> ${entrada_porteiro ? new Date(entrada_porteiro).toLocaleString('pt-BR') : 'Não informada'}<br>
+                <b>Chaves de Serviço:</b> ${chaves_servico || 'Nenhuma'}<br>
+                <b>Chaves do Apartamento:</b> ${chaves_apartamento || 'Nenhuma'}<br>
+                <b>Itens para Subir:</b> ${itens_subir || 'Nenhum'}<br>
+                <b>Itens para Sair:</b> ${itens_sair || 'Nenhum'}<br>
+                <b>Observações:</b> ${observacoes ? observacoes : 'Nenhuma'}<br>`;
+            relatorioDiv.style.display = 'block';
+        });
+        // Salvar relatório
+        document.getElementById('salvar-relatorio').addEventListener('click', function() {
+            if (!usuarioAtual) { alert('Faça login!'); return; }
+            const d = window.relatorioDados;
+            if (!d) { alert('Gere o relatório primeiro!'); return; }
+            let relatorios = JSON.parse(localStorage.getItem(getStorageKey()) || '[]');
+            relatorios.push(d);
+            localStorage.setItem(getStorageKey(), JSON.stringify(relatorios));
+            const msg = document.getElementById('success-msg');
+            msg.innerText = 'Relatório salvo com sucesso!';
+            msg.style.display = 'block';
+            setTimeout(() => { msg.style.display = 'none'; }, 2000);
+            atualizarListaRelatorios();
+        });
+        // Exportar CSV
+        document.getElementById('exportar-csv').addEventListener('click', function() {
+            if (!usuarioAtual) { alert('Faça login!'); return; }
+            const d = window.relatorioDados;
+            if (!d) { alert('Gere o relatório primeiro!'); return; }
+            const csv = `Porteiro,Data/Hora,Chaves de Serviço,Chaves do Apartamento,Itens para Subir,Itens para Sair,Observações\n` +
+                `"${d.porteiro}","${d.datahora}","${d.chaves_servico}","${d.chaves_apartamento}","${d.itens_subir}","${d.itens_sair}","${d.observacoes}"`;
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'relatorio_portaria.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+        // Exportar PDF
+        document.getElementById('exportar-pdf').addEventListener('click', function() {
+            if (!usuarioAtual) { alert('Faça login!'); return; }
+            const relatorioDiv = document.getElementById('relatorio');
+            if (relatorioDiv.style.display === 'none') { alert('Gere o relatório primeiro!'); return; }
+            const printWindow = window.open('', '', 'width=800,height=600');
+            printWindow.document.write('<html><head><title>Relatório de Portaria</title>');
+            printWindow.document.write('<style>body{font-family:Arial,sans-serif;padding:30px;}strong{font-size:20px;}</style>');
+            printWindow.document.write('</head><body >');
+            printWindow.document.write(relatorioDiv.innerHTML);
+            printWindow.document.write('</body></html>');
+            printWindow.document.close();
+            printWindow.focus();
+            printWindow.print();
+            printWindow.close();
+        });
+        // Lista relatórios salvos
+        function atualizarListaRelatorios() {
+            if (!usuarioAtual) { document.getElementById('storage-list').style.display = 'none'; return; }
+            let relatorios = JSON.parse(localStorage.getItem(getStorageKey()) || '[]');
+            if (relatorios.length === 0) { document.getElementById('storage-list').style.display = 'none'; return; }
+            document.getElementById('storage-list').innerHTML = '<b>Relatórios Salvos</b><br>' + relatorios.map((r, i) => `
+                <div style='border-bottom:1px solid #ccc;padding:6px 0;'>
+                <b>${r.porteiro}</b> - ${r.dataGeracao}<br>
+                <button onclick='visualizarRelatorio(${i})'>Visualizar</button>
+                <button onclick='removerRelatorio(${i})' style='background:#ff4d4d;color:#fff;'>Excluir</button></div>
+            `).join('');
+            document.getElementById('storage-list').style.display = 'block';
+        }
+        window.visualizarRelatorio = function(idx) {
+            let relatorios = JSON.parse(localStorage.getItem(getStorageKey()) || '[]');
+            if (!relatorios[idx]) return;
+            const r = relatorios[idx];
+            document.getElementById('relatorio').innerHTML = `<strong>Relatório de Entrega de Posto</strong><br><br>
+                <b>Porteiro:</b> ${r.porteiro}<br>
+                <b>Data/Hora:</b> ${new Date(r.datahora).toLocaleString('pt-BR')}<br>
+                <b>Hora da Entrada do Porteiro:</b> ${r.entrada_porteiro ? new Date(r.entrada_porteiro).toLocaleString('pt-BR') : 'Não informada'}<br>
+                <b>Chaves de Serviço:</b> ${r.chaves_servico || 'Nenhuma'}<br>
+                <b>Chaves do Apartamento:</b> ${r.chaves_apartamento || 'Nenhuma'}<br>
+                <b>Itens para Subir:</b> ${r.itens_subir || 'Nenhum'}<br>
+                <b>Itens para Sair:</b> ${r.itens_sair || 'Nenhum'}<br>
+                <b>Observações:</b> ${r.observacoes ? r.observacoes : 'Nenhuma'}<br>`;
+            document.getElementById('relatorio').style.display = 'block';
+            window.relatorioDados = r;
+        }
+        window.removerRelatorio = function(idx) {
+            let relatorios = JSON.parse(localStorage.getItem(getStorageKey()) || '[]');
+            relatorios.splice(idx, 1);
+            localStorage.setItem(getStorageKey(), JSON.stringify(relatorios));
+            atualizarListaRelatorios();
+        }
+        // Mostrar lista e último relatório ao carregar
+        window.addEventListener('DOMContentLoaded', function() {
+            if (usuarioAtual) {
+                atualizarListaRelatorios();
+                let relatorios = JSON.parse(localStorage.getItem(getStorageKey()) || '[]');
+                if (relatorios.length > 0) {
+                    window.relatorioDados = relatorios[relatorios.length - 1];
+                    window.visualizarRelatorio(relatorios.length - 1);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
