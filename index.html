@@ -204,6 +204,7 @@
                 <div style='border-bottom:1px solid #ccc;padding:6px 0;'>
                 <b>${r.porteiro}</b> - ${r.dataGeracao}<br>
                 <button onclick='visualizarRelatorio(${i})'>Visualizar</button>
+                <button onclick='editarRelatorio(${i})' style='background:#ffc107;color:#333;'>Editar</button>
                 <button onclick='removerRelatorio(${i})' style='background:#ff4d4d;color:#fff;'>Excluir</button></div>
             `).join('');
             document.getElementById('storage-list').style.display = 'block';
@@ -229,6 +230,26 @@
             relatorios.splice(idx, 1);
             localStorage.setItem(getStorageKey(), JSON.stringify(relatorios));
             atualizarListaRelatorios();
+        }
+        window.editarRelatorio = function(idx) {
+            let relatorios = JSON.parse(localStorage.getItem(getStorageKey()) || '[]');
+            if (!relatorios[idx]) return;
+            const r = relatorios[idx];
+            // Preenche o formulário com os dados do relatório selecionado
+            document.getElementById('porteiro').value = r.porteiro;
+            document.getElementById('datahora').value = r.datahora;
+            document.getElementById('entrada_porteiro').value = r.entrada_porteiro || '';
+            document.getElementById('chaves_servico').value = r.chaves_servico;
+            document.getElementById('chaves_apartamento').value = r.chaves_apartamento;
+            document.getElementById('itens_subir').value = r.itens_subir;
+            document.getElementById('itens_sair').value = r.itens_sair;
+            document.getElementById('observacoes').value = r.observacoes;
+            // Remove o relatório antigo para que o novo seja salvo como edição
+            relatorios.splice(idx, 1);
+            localStorage.setItem(getStorageKey(), JSON.stringify(relatorios));
+            window.relatorioDados = r;
+            document.getElementById('relatorio').style.display = 'none';
+            document.getElementById('relatorio').innerHTML = '';
         }
         // Mostrar lista e último relatório ao carregar
         window.addEventListener('DOMContentLoaded', function() {
