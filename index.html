@@ -47,6 +47,7 @@
             <button type="button" id="salvar-relatorio">Salvar Relatório</button>
             <button type="button" id="exportar-csv">Exportar CSV</button>
             <button type="button" id="exportar-pdf">Exportar PDF</button>
+            <button type="button" id="enviar-email">Enviar por Email</button>
         </form>
         <div id="relatorio" class="relatorio" style="display:none;"></div>
         <div id="success-msg" class="relatorio" style="display:none; background:#d4edda; color:#155724; border:1px solid #c3e6cb;"></div>
@@ -194,6 +195,29 @@
             printWindow.focus();
             printWindow.print();
             printWindow.close();
+        });
+        // Enviar por Email
+        document.getElementById('enviar-email').addEventListener('click', function() {
+            if (!usuarioAtual) { alert('Faça login!'); return; }
+            let relatorios = JSON.parse(localStorage.getItem(getStorageKey()) || '[]');
+            if (!relatorios.length) { alert('Nenhum relatório cadastrado!'); return; }
+            let corpo = 'Relatórios de Entrega de Posto\n\n';
+            relatorios.forEach((d, idx) => {
+                corpo += `Relatório ${idx + 1}:\n` +
+                    `Porteiro: ${d.porteiro}\n` +
+                    `Data/Hora: ${new Date(d.datahora).toLocaleString('pt-BR')}\n` +
+                    `Hora da Entrada do Porteiro: ${d.entrada_porteiro ? new Date(d.entrada_porteiro).toLocaleString('pt-BR') : 'Não informada'}\n` +
+                    `Chaves de Serviço: ${d.chaves_servico || 'Nenhuma'}\n` +
+                    `Chaves do Apartamento: ${d.chaves_apartamento || 'Nenhuma'}\n` +
+                    `Itens para Subir: ${d.itens_subir || 'Nenhum'}\n` +
+                    `Itens para Sair: ${d.itens_sair || 'Nenhum'}\n` +
+                    `Observações: ${d.observacoes ? d.observacoes : 'Nenhuma'}\n` +
+                    `Data de Geração: ${d.dataGeracao || ''}\n-----------------------------\n`;
+            });
+            const gmailUrl = 'https://mail.google.com/mail/?view=cm&fs=1&su=' +
+                encodeURIComponent('Todos os Relatórios de Entrega de Posto') +
+                '&body=' + encodeURIComponent(corpo);
+            window.open(gmailUrl, '_blank');
         });
         // Lista relatórios salvos
         function atualizarListaRelatorios() {
