@@ -52,78 +52,14 @@
         <div id="relatorio" class="relatorio" style="display:none;"></div>
         <div id="success-msg" class="relatorio" style="display:none; background:#d4edda; color:#155724; border:1px solid #c3e6cb;"></div>
         <div id="storage-list" class="relatorio" style="display:none;"></div>
-        <div id="login-area" class="relatorio" style="margin-top:30px;"></div>
     </div>
     <script>
-        // --- LOGIN E CADASTRO ---
-        let usuarioAtual = null;
-        function renderLogin() {
-            const loginDiv = document.getElementById('login-area');
-            if (usuarioAtual) {
-                loginDiv.innerHTML = `<b>Usuário logado:</b> ${usuarioAtual} <button onclick='logoutUsuario()'>Sair</button>`;
-                document.querySelector('.container form').style.display = '';
-            } else {
-                loginDiv.innerHTML = `<b>Login:</b><br>
-                    <input id='login-user' placeholder='Usuário' style='margin:5px 0;'><br>
-                    <input id='login-pass' type='password' placeholder='Senha'><br>
-                    <button onclick='loginUsuario()'>Entrar</button>
-                    <button onclick='cadastroUsuario()'>Cadastrar</button>`;
-                document.querySelector('.container form').style.display = 'none';
-                document.getElementById('relatorio').style.display = 'none';
-                document.getElementById('storage-list').style.display = 'none';
-            }
-        }
-        function loginUsuario() {
-            const u = document.getElementById('login-user').value.trim();
-            const p = document.getElementById('login-pass').value;
-            if (!u || !p) { alert('Preencha usuário e senha!'); return; }
-            let users = JSON.parse(localStorage.getItem('usuariosPortaria') || '{}');
-            if (!users[u] || users[u].senha !== p) { alert('Usuário ou senha inválidos!'); return; }
-            usuarioAtual = u;
-            localStorage.setItem('usuarioAtualPortaria', u);
-            // Limpa relatório e lista ao trocar de usuário
-            document.getElementById('relatorio').style.display = 'none';
-            document.getElementById('relatorio').innerHTML = '';
-            document.getElementById('success-msg').style.display = 'none';
-            document.getElementById('storage-list').style.display = 'none';
-            window.relatorioDados = undefined;
-            renderLogin();
-            atualizarListaRelatorios();
-            // Mostra último relatório do novo usuário, se houver
-            let relatorios = JSON.parse(localStorage.getItem(getStorageKey()) || '[]');
-            if (relatorios.length > 0) {
-                window.relatorioDados = relatorios[relatorios.length - 1];
-                window.visualizarRelatorio(relatorios.length - 1);
-            }
-        }
-        function cadastroUsuario() {
-            const u = document.getElementById('login-user').value.trim();
-            const p = document.getElementById('login-pass').value;
-            if (!u || !p) { alert('Preencha usuário e senha!'); return; }
-            let users = JSON.parse(localStorage.getItem('usuariosPortaria') || '{}');
-            if (users[u]) { alert('Usuário já existe!'); return; }
-            users[u] = { senha: p };
-            localStorage.setItem('usuariosPortaria', JSON.stringify(users));
-            alert('Usuário cadastrado! Faça login.');
-        }
-        function logoutUsuario() {
-            usuarioAtual = null;
-            localStorage.removeItem('usuarioAtualPortaria');
-            renderLogin();
-        }
-        // --- FIM LOGIN ---
-
-        // Carregar usuário logado ao abrir
-        usuarioAtual = localStorage.getItem('usuarioAtualPortaria') || null;
-        renderLogin();
+        // Use a fixed key for storage as there's no user login
+        const STORAGE_KEY = 'relatoriosPortaria';
 
         // --- RELATÓRIO ---
-        function getStorageKey() {
-            return 'relatoriosPortaria_' + usuarioAtual;
-        }
         document.getElementById('form-relatorio').addEventListener('submit', function(e) {
             e.preventDefault();
-            if (!usuarioAtual) { alert('Faça login!'); return; }
             const porteiro = document.getElementById('porteiro').value;
             const datahora = document.getElementById('datahora').value;
             const entrada_porteiro = document.getElementById('entrada_porteiro').value;
@@ -149,23 +85,23 @@
                 <b>Observações:</b> ${observacoes ? observacoes : 'Nenhuma'}<br>`;
             relatorioDiv.style.display = 'block';
         });
+
         // Salvar relatório
         document.getElementById('salvar-relatorio').addEventListener('click', function() {
-            if (!usuarioAtual) { alert('Faça login!'); return; }
             const d = window.relatorioDados;
             if (!d) { alert('Gere o relatório primeiro!'); return; }
-            let relatorios = JSON.parse(localStorage.getItem(getStorageKey()) || '[]');
+            let relatorios = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
             relatorios.push(d);
-            localStorage.setItem(getStorageKey(), JSON.stringify(relatorios));
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(relatorios));
             const msg = document.getElementById('success-msg');
             msg.innerText = 'Relatório salvo com sucesso!';
             msg.style.display = 'block';
             setTimeout(() => { msg.style.display = 'none'; }, 2000);
             atualizarListaRelatorios();
         });
+
         // Exportar CSV
         document.getElementById('exportar-csv').addEventListener('click', function() {
-            if (!usuarioAtual) { alert('Faça login!'); return; }
             const d = window.relatorioDados;
             if (!d) { alert('Gere o relatório primeiro!'); return; }
             const csv = `Porteiro,Data/Hora,Chaves de Serviço,Chaves do Apartamento,Itens para Subir,Itens para Sair,Observações\n` +
@@ -180,9 +116,9 @@
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
         });
+
         // Exportar PDF
         document.getElementById('exportar-pdf').addEventListener('click', function() {
-            if (!usuarioAtual) { alert('Faça login!'); return; }
             const relatorioDiv = document.getElementById('relatorio');
             if (relatorioDiv.style.display === 'none') { alert('Gere o relatório primeiro!'); return; }
             const printWindow = window.open('', '', 'width=800,height=600');
@@ -196,10 +132,10 @@
             printWindow.print();
             printWindow.close();
         });
+
         // Enviar por Email
         document.getElementById('enviar-email').addEventListener('click', function() {
-            if (!usuarioAtual) { alert('Faça login!'); return; }
-            let relatorios = JSON.parse(localStorage.getItem(getStorageKey()) || '[]');
+            let relatorios = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
             if (!relatorios.length) { alert('Nenhum relatório cadastrado!'); return; }
             let corpo = 'Relatórios de Entrega de Posto\n\n';
             relatorios.forEach((d, idx) => {
@@ -219,11 +155,14 @@
                 '&body=' + encodeURIComponent(corpo);
             window.open(gmailUrl, '_blank');
         });
+
         // Lista relatórios salvos
         function atualizarListaRelatorios() {
-            if (!usuarioAtual) { document.getElementById('storage-list').style.display = 'none'; return; }
-            let relatorios = JSON.parse(localStorage.getItem(getStorageKey()) || '[]');
-            if (relatorios.length === 0) { document.getElementById('storage-list').style.display = 'none'; return; }
+            let relatorios = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            if (relatorios.length === 0) {
+                document.getElementById('storage-list').style.display = 'none';
+                return;
+            }
             document.getElementById('storage-list').innerHTML = '<b>Relatórios Salvos</b><br>' + relatorios.map((r, i) => `
                 <div style='border-bottom:1px solid #ccc;padding:6px 0;'>
                 <b>${r.porteiro}</b> - ${r.dataGeracao}<br>
@@ -233,8 +172,9 @@
             `).join('');
             document.getElementById('storage-list').style.display = 'block';
         }
+
         window.visualizarRelatorio = function(idx) {
-            let relatorios = JSON.parse(localStorage.getItem(getStorageKey()) || '[]');
+            let relatorios = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
             if (!relatorios[idx]) return;
             const r = relatorios[idx];
             document.getElementById('relatorio').innerHTML = `<strong>Relatório de Entrega de Posto</strong><br><br>
@@ -249,14 +189,16 @@
             document.getElementById('relatorio').style.display = 'block';
             window.relatorioDados = r;
         }
+
         window.removerRelatorio = function(idx) {
-            let relatorios = JSON.parse(localStorage.getItem(getStorageKey()) || '[]');
+            let relatorios = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
             relatorios.splice(idx, 1);
-            localStorage.setItem(getStorageKey(), JSON.stringify(relatorios));
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(relatorios));
             atualizarListaRelatorios();
         }
+
         window.editarRelatorio = function(idx) {
-            let relatorios = JSON.parse(localStorage.getItem(getStorageKey()) || '[]');
+            let relatorios = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
             if (!relatorios[idx]) return;
             const r = relatorios[idx];
             // Preenche o formulário com os dados do relatório selecionado
@@ -270,20 +212,19 @@
             document.getElementById('observacoes').value = r.observacoes;
             // Remove o relatório antigo para que o novo seja salvo como edição
             relatorios.splice(idx, 1);
-            localStorage.setItem(getStorageKey(), JSON.stringify(relatorios));
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(relatorios));
             window.relatorioDados = r;
             document.getElementById('relatorio').style.display = 'none';
             document.getElementById('relatorio').innerHTML = '';
         }
+
         // Mostrar lista e último relatório ao carregar
         window.addEventListener('DOMContentLoaded', function() {
-            if (usuarioAtual) {
-                atualizarListaRelatorios();
-                let relatorios = JSON.parse(localStorage.getItem(getStorageKey()) || '[]');
-                if (relatorios.length > 0) {
-                    window.relatorioDados = relatorios[relatorios.length - 1];
-                    window.visualizarRelatorio(relatorios.length - 1);
-                }
+            atualizarListaRelatorios();
+            let relatorios = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            if (relatorios.length > 0) {
+                window.relatorioDados = relatorios[relatorios.length - 1];
+                window.visualizarRelatorio(relatorios.length - 1);
             }
         });
     </script>
