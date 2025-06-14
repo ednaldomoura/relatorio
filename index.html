@@ -5,14 +5,152 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Relatório de Portaria - Entrega de Posto</title>
     <style>
-        body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 0; }
-        .container { max-width: 500px; margin: 40px auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        h2 { text-align: center; color: #333; }
-        label { display: block; margin-top: 15px; color: #555; }
-        input, textarea { width: 100%; padding: 8px; margin-top: 5px; border-radius: 4px; border: 1px solid #ccc; }
-        button { margin-top: 20px; width: 100%; padding: 10px; background: #007bff; color: #fff; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; }
-        button:hover { background: #0056b3; }
-        .relatorio { margin-top: 30px; background: #e9ecef; padding: 15px; border-radius: 6px; }
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex; /* Para centralizar o contêiner */
+            justify-content: center; /* Para centralizar o contêiner */
+            align-items: flex-start; /* Alinha no topo */
+            min-height: 100vh; /* Garante que o body ocupe a altura total da tela */
+        }
+        .container {
+            max-width: 90%; /* Aumenta a largura máxima para se adaptar melhor a telas maiores */
+            width: 800px; /* Largura base para telas maiores */
+            margin: 40px auto; /* Mantém a margem superior/inferior */
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            box-sizing: border-box; /* Garante que padding e border sejam incluídos na largura total */
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 25px;
+        }
+        label {
+            display: block;
+            margin-top: 15px;
+            color: #555;
+            font-weight: bold;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px; /* Aumenta o padding para campos maiores */
+            margin-top: 5px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            box-sizing: border-box; /* Inclui padding e border na largura total */
+            font-size: 16px; /* Aumenta a fonte dos campos */
+        }
+        textarea {
+            resize: vertical; /* Permite redimensionar verticalmente */
+            min-height: 80px; /* Altura mínima para a área de texto */
+        }
+        button {
+            margin-top: 25px; /* Aumenta a margem superior dos botões */
+            width: 100%;
+            padding: 12px; /* Aumenta o padding dos botões */
+            background: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            font-size: 17px; /* Aumenta a fonte dos botões */
+            cursor: pointer;
+            transition: background 0.3s ease; /* Efeito de transição ao passar o mouse */
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .relatorio {
+            margin-top: 30px;
+            background: #e9ecef;
+            padding: 20px; /* Aumenta o padding do relatório */
+            border-radius: 6px;
+            border: 1px solid #dee2e6; /* Adiciona uma borda sutil */
+            line-height: 1.6; /* Melhora a legibilidade */
+        }
+        .relatorio strong {
+            font-size: 22px; /* Aumenta a fonte do título do relatório */
+            display: block;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 10px;
+        }
+        .relatorio b {
+            color: #333;
+        }
+        #success-msg {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 4px;
+        }
+        #storage-list {
+            margin-top: 30px;
+            padding: 15px;
+            background: #f8f9fa;
+            border: 1px solid #e2e6ea;
+            border-radius: 6px;
+        }
+        #storage-list b {
+            font-size: 18px;
+            display: block;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        #storage-list div {
+            border-bottom: 1px solid #e9ecef;
+            padding: 10px 0;
+            display: flex;
+            flex-wrap: wrap; /* Permite que os itens quebrem para a próxima linha se não houver espaço */
+            align-items: center;
+            gap: 10px; /* Espaçamento entre os botões */
+        }
+        #storage-list div:last-child {
+            border-bottom: none;
+        }
+        #storage-list button {
+            width: auto; /* Botões menores na lista */
+            padding: 8px 15px;
+            font-size: 14px;
+            margin-top: 0;
+        }
+        #storage-list button:not(:last-child) {
+            margin-right: 5px; /* Espaço entre os botões na lista */
+        }
+
+        /* MEDIA QUERIES para responsividade */
+        @media (max-width: 768px) {
+            .container {
+                margin: 20px auto;
+                padding: 20px;
+                max-width: 95%; /* Ainda maior em telas menores */
+            }
+            button {
+                padding: 10px;
+                font-size: 15px;
+            }
+            h2 {
+                font-size: 24px;
+            }
+            .relatorio strong {
+                font-size: 20px;
+            }
+            #storage-list div {
+                flex-direction: column; /* Empilha os botões em telas pequenas */
+                align-items: flex-start;
+            }
+            #storage-list button {
+                width: 100%; /* Botões da lista ocupam a largura total */
+                margin-bottom: 5px;
+                margin-right: 0 !important;
+            }
+        }
     </style>
 </head>
 <body>
